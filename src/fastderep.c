@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
 	kseq_t *seq;
 	int i, l;
 	unsigned char filter[FILTER_SIZE_BYTES];
+	int line = 0;
 
 
 	if (argc == 1) {
@@ -34,13 +35,27 @@ int main(int argc, char *argv[])
 
 	fp = gzopen(argv[1], "r");
 	seq = kseq_init(fp);
+
 	while ((l = kseq_read(seq)) >= 0) {
-		printf("name: %s\n", seq->name.s);
-		if (seq->comment.l) printf("comment: %s\n", seq->comment.s);
-		printf(" seq: %s\n", seq->seq.s);
-		if (seq->qual.l) printf("qual: %s\n", seq->qual.s);
+
+		if (in_dict(filter, seq->seq.s)) continue;
+		insert_word(filter, seq->seq.s);
+
+		printf("%c%s", seq->qual.l == seq->seq.l? '@' : '>', seq->name.s);
+		if (seq->comment.l) printf(" %s", seq->comment.s);
+		putchar('\n');
+		for (i = 0; i < l; ++i) {
+			putchar(seq->seq.s[i]);
+		}
+		putchar('\n');
+		if (seq->qual.l != seq->seq.l) continue;
+		printf("+");
+		for (i = 0; i < l; ++i) {
+			if (i == 0 || (line > 0 && i % line == 0)) putchar('\n');
+			putchar(seq->qual.s[i]);
+		}
+		putchar('\n');
 	}
-	printf("return value: %d\n", l);
 	kseq_destroy(seq);
 	gzclose(fp);
 	return 0;
